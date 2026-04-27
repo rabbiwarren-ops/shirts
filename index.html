@@ -537,12 +537,13 @@ async function submitForm() {
   };
 
   try {
-    await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+   const form = new FormData();
+form.append('data', JSON.stringify(payload));
+await fetch(APPS_SCRIPT_URL, {
+  method: 'POST',
+  mode: 'no-cors',
+  body: form
+});
     showSuccess(payload);
   } catch (e) {
     btn.disabled = false;
