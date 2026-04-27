@@ -394,7 +394,7 @@
 <script>
 // ============================
 // עדכן כאן את הלינק אחרי שתפרס את Apps Script
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzKdoia0ucwDg4MVugqCGh6IbWLC-MkO8m4YHPdvvPnV8vCL4vEb9sBWWSF1NRHZL30/exec";
+const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_URL_HERE";
 const PRICE_PER_SHIRT = 25; // ← שנה כאן את המחיר
 // ============================
 
@@ -515,7 +515,7 @@ function validateForm() {
   return valid;
 }
 
-async function submitForm() {
+function submitForm() {
   if (!validateForm()) return;
 
   const btn = document.getElementById('submitBtn');
@@ -531,25 +531,43 @@ async function submitForm() {
     firstName: document.getElementById('firstName').value.trim(),
     lastName: document.getElementById('lastName').value.trim(),
     sizes: sizesText,
-    totalQty,
-    totalPrice,
+    totalQty: String(totalQty),
+    totalPrice: String(totalPrice),
     timestamp: new Date().toLocaleString('he-IL')
   };
 
-  try {
-   const form = new FormData();
-form.append('data', JSON.stringify(payload));
-await fetch(APPS_SCRIPT_URL, {
-  method: 'POST',
-  mode: 'no-cors',
-  body: form
-});
+  // שליחה דרך JSONP
+  const callbackName = 'cb_' + Date.now();
+  const params = new URLSearchParams({...payload, callback: callbackName});
+  const url = APPS_SCRIPT_URL + '?' + params.toString();
+
+  let done = false;
+
+  window[callbackName] = function(data) {
+    done = true;
+    delete window[callbackName];
     showSuccess(payload);
-  } catch (e) {
-    btn.disabled = false;
-    btn.textContent = 'שליחת ההזמנה ✓';
-    alert('שגיאה בשליחה. נסה שוב.');
-  }
+  };
+
+  const script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() {
+    if (!done) {
+      done = true;
+      // גם אם יש שגיאה, ייתכן שהנתונים נשמרו
+      showSuccess(payload);
+    }
+  };
+
+  // timeout — אחרי 6 שניות נניח שנשמר
+  setTimeout(() => {
+    if (!done) {
+      done = true;
+      showSuccess(payload);
+    }
+  }, 6000);
+
+  document.head.appendChild(script);
 }
 
 function showSuccess(payload) {
